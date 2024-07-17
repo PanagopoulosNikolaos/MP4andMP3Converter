@@ -5,7 +5,7 @@ import threading
 
 
 
-
+#An error occurred: get_throttling_function_name: could not find match for multiple
 class YouTubeDownloader:
     """
         YouTubeDownloader class for downloading videos from YouTube.
@@ -104,7 +104,7 @@ class YouTubeDownloader:
             else:
                 print("No suitable stream available.")
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"An error occurred for path: {e}")
 
 
     def on_progress(self, stream, chunk, bytes_remaining):
