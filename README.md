@@ -1,6 +1,6 @@
 # MP4andMP3Converter
 
-if the following error occurs do the following
+if this error occurs ["An error occurred for path: get_throttling_function_name: could not find match for multiple"] do the following
 ### 1.Go to your pythons file location
 ### 2.Locate the python Library pytube
 ### 3.Open the cipher.py
