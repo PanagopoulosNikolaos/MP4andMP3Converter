@@ -11,3 +11,11 @@ if this error occurs ["An error occurred for path: get_throttling_function_name:
         r'\([a-z]\s*=\s*([a-zA-Z0-9$]+)(\[\d+\])\([a-z]\)',
 ~~~
 ![mp3andmp4converter](https://github.com/user-attachments/assets/8328d93b-bb02-4d17-b45c-74fbf38e3d3f)
+
+
+#Note:
+~~~text
+Keep in mind that this program download's Videos at the highest resolution available.
+If the storage is limited please refrain from downloading videos with this program!
+~~~
+## Next update will include a resolution selection drop-down menu.
