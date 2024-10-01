@@ -1,134 +1,140 @@
 import os
 import logging
-from pytube import YouTube
-from moviepy.editor import AudioFileClip
+import yt_dlp
 from tkinter import messagebox
 
-# It's good practice to configure logging at the beginning of your script
 logging.basicConfig(level=logging.INFO)
 
 class MP3Downloader:
-    
-    """
-        MP3Downloader class is used to download YouTube videos as MP3 files. It provides methods to set the URL of the video, set the save path for the downloaded file, and download the video as an MP3.
-
-        Attributes:
-            url (str): The URL of the YouTube video.
-            save_path (str): The path where the downloaded MP3 file will be saved.
-            progress_callback (function): A callback function to track the progress of the download.
-
-        Methods:
-            __init__(self, url=None, save_path=None, progress_callback=None):
-                Initializes a new instance of the MP3Downloader class.
-                Args:
-                    url (str, optional): The URL of the YouTube video. Defaults to None.
-                    save_path (str, optional): The path where the downloaded MP3 file will be saved. Defaults to None.
-                    progress_callback (function, optional): A callback function to track the progress of the download. Defaults to None.
-
-            set_url(self, url):
-                Sets the URL of the YouTube video.
-                Args:
-                    url (str): The URL of the YouTube video.
-
-            set_path(self, save_path):
-                Sets the save path for the downloaded MP3 file.
-                Args:
-                    save_path (str): The path where the downloaded MP3 file will be saved.
-
-            get_default_download_path(self):
-                Returns the default download path, typically the user's Downloads folder.
-
-            download_as_mp3(self):
-                Downloads the YouTube video as an MP3 file.
-                Returns:
-                    str: The path of the downloaded MP3 file.
-
-        Raises:
-            Exception: If the MP3 download and conversion fails.
-    """
-    
     def __init__(self, url=None, save_path=None, progress_callback=None):
         """
-        Initializes the class instance with the provided URL, save path, and progress callback.
+        Initializes an instance of the MP3Downloader class.
 
-        Parameters:
-            url (str): The URL to download from.
-            save_path (str): The path to save the downloaded file to. Defaults to the user's Downloads folder if not specified.
-            progress_callback (function): A callback function to track the download progress.
+        Parameters
+        ----------
+        url : str, optional
+            The URL of the YouTube video to download. If not provided, must be set using set_url() before downloading.
+        save_path : str, optional
+            The path where the downloaded MP3 file will be saved. If not provided, defaults to the user's home directory.
+        progress_callback : function, optional
+            A function that will be called with the percentage of download progress as an argument. If not provided, no progress messages will be displayed.
+
+        Returns
+        -------
+        None
         """
         self.url = url
-        # Set the default save_path to the user's Downloads folder if not specified
         self.save_path = save_path if save_path else self.get_default_download_path()
         self.progress_callback = progress_callback
 
     def set_url(self, url):
         """
-        Set the URL for the object.
+        Sets the URL of the YouTube video to download.
 
-        Parameters:
-            url (str): The URL to be set.
+        Parameters
+        ----------
+        url : str
+            The URL of the YouTube video to download.
 
-        Returns:
-            None
+        Returns
+        -------
+        None
         """
         self.url = url
 
     def set_path(self, save_path):
         """
-        Set the path for saving files.
+        Sets the path where the downloaded MP3 file will be saved.
 
-        Parameters:
-            save_path (str): The path where files will be saved. If not provided, the default download path will be used.
+        Parameters
+        ----------
+        save_path : str, optional
+            The path where the downloaded MP3 file will be saved. If not provided, defaults to the user's home directory.
 
-        Returns:
-            None
+        Returns
+        -------
+        None
         """
-        # Allow setting a new path; default to Downloads folder if not specified
         self.save_path = save_path if save_path else self.get_default_download_path()
 
     @staticmethod
     def get_default_download_path():
         """
-        Get the default download path for the user's operating system.
+        Returns the default path where downloaded files are saved.
 
-        Returns:
-            str: The default download path.
+        Returns
+        -------
+        str
+            The default path where downloaded files are saved. This is the user's home directory.
         """
-        
-        home_directory = os.path.expanduser('~')  # Get the home directory
+        home_directory = os.path.expanduser('~')
         return os.path.join(home_directory, 'Downloads')
 
     def download_as_mp3(self):
+
         """
-        Downloads the audio stream from a YouTube video as an MP3 file.
+        Downloads the audio from a YouTube video as an MP3 file and saves it to the path set by set_path() or the default path.
 
-        Returns:
-            str: The path to the downloaded MP3 file.
+        Parameters
+        ----------
+        None
 
-        Raises:
-            Exception: If the MP3 download and conversion fails.
+        Returns
+        -------
+        str
+            The path where the downloaded MP3 file was saved.
+
+        Raises
+        ------
+        Exception
+            If the download and conversion fails, an exception is raised with a message describing the error.
         """
         try:
-            yt = YouTube(self.url)
-            audio_stream = yt.streams.filter(only_audio=True).order_by('abr').desc().first()
-            final_file_path = os.path.join(self.save_path, yt.title.replace("/", "-") + ".mp3")
+            options = {
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'outtmpl': os.path.join(self.save_path, '%(title)s.%(ext)s'),
+                'progress_hooks': [self.progress_hook],
+            }
             
-            logging.info(f"Downloading audio stream to: {final_file_path}")
-            # Download the audio stream directly to the final location as mp4 or webm
-            temp_file_path = audio_stream.download(output_path=self.save_path, filename=final_file_path)
+            with yt_dlp.YoutubeDL(options) as ydl:
+                logging.info(f"Downloading audio from: {self.url}")
+                ydl.download([self.url])
             
-            # Check if conversion is necessary (if the file is not already an mp3)
-            if not final_file_path.endswith(".mp3"):
-                logging.info(f"Converting to MP3: {final_file_path}")
-                audio_clip = AudioFileClip(temp_file_path)
-                audio_clip.write_audiofile(final_file_path)
-                audio_clip.close()
-                os.remove(temp_file_path)  # Remove the original download if conversion occurred
-            
-            logging.info(f"MP3 saved to: {final_file_path}")
+            logging.info(f"MP3 downloaded successfully to: {self.save_path}")
             messagebox.showinfo("Success", "MP3 download and conversion successful.")
-            return final_file_path
+            return self.save_path
         except Exception as e:
             logging.error(f"MP3 download and conversion failed: {e}")
             messagebox.showerror("Error", f"MP3 download and conversion failed: {e}")
             raise
+
+    def progress_hook(self, d):
+        """
+        Updates the progress bar in the GUI with the given percentage value.
+
+        Parameters
+        ----------
+        d : dict
+            A dictionary with information about the download progress.
+
+        Notes
+        -----
+        If the status is 'downloading', the progress bar is updated with a percentage value calculated from the total_bytes and downloaded_bytes.
+        If the status is 'finished', the progress bar is set to 100%.
+        """
+
+        if d['status'] == 'downloading':
+            total_bytes = d.get('total_bytes') or d.get('total_bytes_estimate', 0)
+            downloaded_bytes = d.get('downloaded_bytes', 0)
+            if total_bytes > 0:
+                percentage = (downloaded_bytes / total_bytes) * 100
+                if self.progress_callback:
+                    self.progress_callback(int(percentage))
+        elif d['status'] == 'finished':
+            if self.progress_callback:
+                self.progress_callback(100)
