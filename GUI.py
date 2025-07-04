@@ -14,43 +14,77 @@ class YouTubeDownloaderGUI:
         self.build_gui()
 
     def build_gui(self):
-        self.master.title('MP4 Converter')
-        tk.Label(self.master, text="Enter YouTube video URL:").grid(row=0, column=0, padx=10, pady=10)
-        self.url_entry = tk.Entry(self.master, width=50)
-        self.url_entry.grid(row=0, column=1, padx=10, pady=10)
+        self.master.title('MP4/MP3 Downloader')
+        self.master.geometry("650x550")
+        self.master.resizable(False, False)
 
-        # The fetch button is now removed, as fetching is automatic.
+        # Style configuration
+        style = ttk.Style(self.master)
+        style.theme_use('clam')
+        style.configure("TLabel", padding=6, font=('Helvetica', 10))
+        style.configure("TButton", padding=6, font=('Helvetica', 10))
+        style.configure("TEntry", padding=6, font=('Helvetica', 10))
+        style.configure("TRadiobutton", font=('Helvetica', 10))
+        style.configure("TMenubutton", font=('Helvetica', 10))
 
-        self.browse_button = tk.Button(self.master, text="Browse Download Path", command=self.browse_path)
-        self.browse_button.grid(row=1, column=0, padx=10, pady=10)
+        # Main frame
+        main_frame = ttk.Frame(self.master, padding="10 10 10 10")
+        main_frame.pack(expand=True, fill=tk.BOTH)
 
-        self.path_display = tk.Entry(self.master, width=50)
-        self.path_display.grid(row=1, column=1, padx=10, pady=10)
+        # URL and Path Frame
+        url_path_frame = ttk.LabelFrame(main_frame, text="Input", padding="10 10 10 10")
+        url_path_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(url_path_frame, text="YouTube URL:").grid(row=0, column=0, sticky="w", pady=2)
+        self.url_entry = ttk.Entry(url_path_frame, width=60)
+        self.url_entry.grid(row=0, column=1, columnspan=2, sticky="ew", pady=2)
 
-        tk.Label(self.master, text="Resolution:").grid(row=1, column=2, padx=10, pady=10, sticky='w')
-        self.resolution_var = tk.StringVar(self.master)
-        self.resolution_menu = tk.OptionMenu(self.master, self.resolution_var, "")
-        self.resolution_menu.grid(row=1, column=2, padx=80, pady=10, sticky='e')
+        ttk.Label(url_path_frame, text="Download Path:").grid(row=1, column=0, sticky="w", pady=2)
+        self.path_display = ttk.Entry(url_path_frame, width=50)
+        self.path_display.grid(row=1, column=1, sticky="ew", pady=2)
+        self.browse_button = ttk.Button(url_path_frame, text="Browse", command=self.browse_path)
+        self.browse_button.grid(row=1, column=2, sticky="e", padx=5, pady=2)
+        
+        url_path_frame.columnconfigure(1, weight=1)
 
+        # Options Frame
+        options_frame = ttk.LabelFrame(main_frame, text="Options", padding="10 10 10 10")
+        options_frame.pack(fill=tk.X, pady=5)
 
-        self.download_button = tk.Button(self.master, text="Download!", command=self.start_download)
-        self.download_button.grid(row=2, column=0, padx=10, pady=10)
-
-        self.progress = ttk.Progressbar(self.master, orient='horizontal', length=300, mode='determinate')
-        self.progress.grid(row=3, column=0, columnspan=2, padx=10, pady=10)
-
-        self.close_button = tk.Button(self.master, text="Close", command=self.master.destroy)
-        self.close_button.grid(row=4, column=0, padx=10, pady=10)
-
+        ttk.Label(options_frame, text="Format:").grid(row=0, column=0, sticky="w")
         self.format_var = tk.StringVar(value="MP4")
-        tk.Label(self.master, text="Select download format:").grid(row=2, column=1, padx=10, pady=5)
-        self.mp3_radio = tk.Radiobutton(self.master, text="MP3", variable=self.format_var, value="MP3", command=self.update_format_color)
-        self.mp3_radio.grid(row=2, column=1, sticky='w', padx=12)
-        self.mp4_radio = tk.Radiobutton(self.master, text="MP4", variable=self.format_var, value="MP4", command=self.update_format_color)
-        self.mp4_radio.grid(row=2, column=1, sticky='e', padx=12)
+        self.mp4_radio = ttk.Radiobutton(options_frame, text="MP4", variable=self.format_var, value="MP4", command=self.update_format_color)
+        self.mp4_radio.grid(row=0, column=1, sticky='w', padx=5)
+        self.mp3_radio = ttk.Radiobutton(options_frame, text="MP3", variable=self.format_var, value="MP3", command=self.update_format_color)
+        self.mp3_radio.grid(row=0, column=2, sticky='w', padx=5)
 
-        self.message_screen = Text(self.master, height=10, width=70)
-        self.message_screen.grid(row=5, column=0, columnspan=2, padx=10, pady=10)
+        ttk.Label(options_frame, text="Resolution:").grid(row=1, column=0, sticky="w")
+        self.resolution_var = tk.StringVar(self.master)
+        self.resolution_menu = ttk.OptionMenu(options_frame, self.resolution_var, "Highest")
+        self.resolution_menu.grid(row=1, column=1, columnspan=2, sticky="w", pady=5)
+
+
+        # Controls Frame
+        controls_frame = ttk.Frame(main_frame)
+        controls_frame.pack(fill=tk.X, pady=5)
+        controls_frame.columnconfigure(0, weight=1)
+        controls_frame.columnconfigure(1, weight=1)
+
+        self.download_button = ttk.Button(controls_frame, text="Download", command=self.start_download)
+        self.download_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
+        
+        self.close_button = ttk.Button(controls_frame, text="Close", command=self.master.destroy)
+        self.close_button.grid(row=0, column=1, sticky="ew", padx=(5, 0))
+
+        # Progress and Log Frame
+        progress_log_frame = ttk.LabelFrame(main_frame, text="Status", padding="10 10 10 10")
+        progress_log_frame.pack(expand=True, fill=tk.BOTH, pady=5)
+
+        self.progress = ttk.Progressbar(progress_log_frame, orient='horizontal', length=400, mode='determinate')
+        self.progress.pack(fill=tk.X, pady=5)
+
+        self.message_screen = Text(progress_log_frame, height=10, width=75, font=('Courier', 9), fg='black', bg='#f0f0f0')
+        self.message_screen.pack(expand=True, fill=tk.BOTH, pady=5)
         self.message_screen.config(state=tk.DISABLED)
 
         self.update_format_color()
@@ -115,13 +149,9 @@ class YouTubeDownloaderGUI:
             self.downloader.set_path(path)
             self.downloader.resolution = int(resolution)
             download_thread = threading.Thread(target=self.downloader.download_video)
-            self.url_entry.config(bg="red")
-            self.path_display.config(bg="red")
         elif self.format_var.get() == "MP3":
             self.downloader = MP3Downloader(url, path, self.update_progress, self.log_message)
             download_thread = threading.Thread(target=self.downloader.download_as_mp3)
-            self.url_entry.config(bg="blue")
-            self.path_display.config(bg="blue")
         download_thread.start()
 
     def update_progress(self, percentage):
@@ -141,12 +171,9 @@ class YouTubeDownloaderGUI:
         self.message_screen.config(state=tk.DISABLED)
 
     def update_format_color(self):
-        if self.format_var.get() == "MP4":
-            self.mp4_radio.config(fg="red")
-            self.mp3_radio.config(fg="black")
-        else:
-            self.mp3_radio.config(fg="red")
-            self.mp4_radio.config(fg="black")
+        # This can be expanded to disable/enable the resolution dropdown
+        is_mp4 = self.format_var.get() == "MP4"
+        self.resolution_menu.config(state=tk.NORMAL if is_mp4 else tk.DISABLED)
 
 def run_gui():
     root = tk.Tk()
