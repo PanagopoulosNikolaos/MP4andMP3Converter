@@ -107,6 +107,7 @@ class MP3Downloader:
                 }],
                 'outtmpl': os.path.join(self.save_path, f'{title}.%(ext)s'),
                 'progress_hooks': [self.progress_hook],
+                'keepvideo': True,
             }
             
             with yt_dlp.YoutubeDL(options) as ydl:
