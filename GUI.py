@@ -19,11 +19,19 @@ class YouTubeDownloaderGUI:
         self.url_entry = tk.Entry(self.master, width=50)
         self.url_entry.grid(row=0, column=1, padx=10, pady=10)
 
+        # The fetch button is now removed, as fetching is automatic.
+
         self.browse_button = tk.Button(self.master, text="Browse Download Path", command=self.browse_path)
         self.browse_button.grid(row=1, column=0, padx=10, pady=10)
 
         self.path_display = tk.Entry(self.master, width=50)
         self.path_display.grid(row=1, column=1, padx=10, pady=10)
+
+        tk.Label(self.master, text="Resolution:").grid(row=1, column=2, padx=10, pady=10, sticky='w')
+        self.resolution_var = tk.StringVar(self.master)
+        self.resolution_menu = tk.OptionMenu(self.master, self.resolution_var, "")
+        self.resolution_menu.grid(row=1, column=2, padx=80, pady=10, sticky='e')
+
 
         self.download_button = tk.Button(self.master, text="Download!", command=self.start_download)
         self.download_button.grid(row=2, column=0, padx=10, pady=10)
@@ -46,12 +54,49 @@ class YouTubeDownloaderGUI:
         self.message_screen.config(state=tk.DISABLED)
 
         self.update_format_color()
+        self.last_checked_url = ""
+        self.master.after(1000, self.auto_fetch_resolutions)
+
+    def auto_fetch_resolutions(self):
+        current_url = self.url_entry.get()
+        if current_url and current_url != self.last_checked_url:
+            self.last_checked_url = current_url
+            # Run fetching in a separate thread to not block the GUI
+            threading.Thread(target=self.fetch_resolutions, daemon=True).start()
+        self.master.after(1000, self.auto_fetch_resolutions) # Check again in 1 second
 
     def browse_path(self):
         path = filedialog.askdirectory()
         if path:
             self.path_display.delete(0, tk.END)
             self.path_display.insert(0, path)
+
+    def fetch_resolutions(self):
+        url = self.last_checked_url # Use the last checked URL
+        if not url:
+            return # Silently return if no URL
+
+        try:
+            downloader = YouTubeDownloader()
+            downloader.set_url(url)
+            info = downloader.fetch_video_info()
+            formats = info.get('formats', [])
+            resolutions = sorted(list(set([f['height'] for f in formats if f.get('height') and f.get('vcodec') != 'none'])), reverse=True)
+            
+            if not resolutions:
+                messagebox.showinfo("Info", "No video resolutions found.")
+                return
+
+            self.resolution_var.set(resolutions[0]) # Default to highest
+            menu = self.resolution_menu['menu']
+            menu.delete(0, 'end')
+            for res in resolutions:
+                menu.add_command(label=f"{res}p", command=lambda value=res: self.resolution_var.set(value))
+            
+            self.log_message("Resolutions fetched successfully.")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to fetch resolutions: {e}")
 
     def start_download(self):
         self.progress['value'] = 0
@@ -61,16 +106,19 @@ class YouTubeDownloaderGUI:
         path = self.path_display.get() or self.default_download_path
 
         if self.format_var.get() == "MP4":
-            self.downloader = YouTubeDownloader(self.update_progress)
+            resolution = self.resolution_var.get()
+            if not resolution:
+                messagebox.showerror("Error", "Please fetch and select a resolution.")
+                return
+            self.downloader = YouTubeDownloader(self.update_progress, self.log_message)
             self.downloader.set_url(url)
             self.downloader.set_path(path)
-            self.log_message("MP4 download started.")
+            self.downloader.resolution = int(resolution)
             download_thread = threading.Thread(target=self.downloader.download_video)
             self.url_entry.config(bg="red")
             self.path_display.config(bg="red")
         elif self.format_var.get() == "MP3":
-            self.downloader = MP3Downloader(url, path, self.update_progress)
-            self.log_message("MP3 download started.")
+            self.downloader = MP3Downloader(url, path, self.update_progress, self.log_message)
             download_thread = threading.Thread(target=self.downloader.download_as_mp3)
             self.url_entry.config(bg="blue")
             self.path_display.config(bg="blue")
@@ -80,8 +128,6 @@ class YouTubeDownloaderGUI:
         self.progress['value'] = percentage
         self.progress.update()
         if percentage == 100:
-            download_path = self.path_display.get() or self.default_download_path
-            self.log_message(f"Download completed. File saved at {download_path}")
             self.master.after(3000, self.clear_progress_bar)
 
     def clear_progress_bar(self):

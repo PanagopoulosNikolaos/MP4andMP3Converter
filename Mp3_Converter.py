@@ -6,7 +6,7 @@ from tkinter import messagebox
 logging.basicConfig(level=logging.INFO)
 
 class MP3Downloader:
-    def __init__(self, url=None, save_path=None, progress_callback=None):
+    def __init__(self, url=None, save_path=None, progress_callback=None, log_callback=None):
         """
         Initializes an instance of the MP3Downloader class.
 
@@ -26,6 +26,7 @@ class MP3Downloader:
         self.url = url
         self.save_path = save_path if save_path else self.get_default_download_path()
         self.progress_callback = progress_callback
+        self.log_callback = log_callback
 
     def set_url(self, url):
         """
@@ -90,6 +91,13 @@ class MP3Downloader:
             If the download and conversion fails, an exception is raised with a message describing the error.
         """
         try:
+            with yt_dlp.YoutubeDL({}) as ydl:
+                info = ydl.extract_info(self.url, download=False)
+                title = info.get('title', 'Unknown Title')
+
+            if self.log_callback:
+                self.log_callback(f"Download started: \"{title}\" - Format: MP3. Saved at: \"{self.save_path}\"")
+
             options = {
                 'format': 'bestaudio/best',
                 'postprocessors': [{
@@ -97,20 +105,20 @@ class MP3Downloader:
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
                 }],
-                'outtmpl': os.path.join(self.save_path, '%(title)s.%(ext)s'),
+                'outtmpl': os.path.join(self.save_path, f'{title}.%(ext)s'),
                 'progress_hooks': [self.progress_hook],
             }
             
             with yt_dlp.YoutubeDL(options) as ydl:
-                logging.info(f"Downloading audio from: {self.url}")
                 ydl.download([self.url])
             
-            logging.info(f"MP3 downloaded successfully to: {self.save_path}")
-            messagebox.showinfo("Success", "MP3 download and conversion successful.")
+            if self.log_callback:
+                self.log_callback(f"Download complete at {self.save_path}")
+
             return self.save_path
         except Exception as e:
-            logging.error(f"MP3 download and conversion failed: {e}")
-            messagebox.showerror("Error", f"MP3 download and conversion failed: {e}")
+            if self.log_callback:
+                self.log_callback(f"An error occurred: {e}")
             raise
 
     def progress_hook(self, d):
